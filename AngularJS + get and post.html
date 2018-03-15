@@ -1,0 +1,132 @@
+﻿<!doctype html>
+<html ng-app="app">
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.7/angular.min.js"></script>
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css"> 
+</head>
+
+<script type="text/javascript">
+  var app = angular.module('app', []);
+
+    //controller
+    app.controller('BuscarToken', function($scope, $http, $window) {
+	
+    var self = $scope;
+	
+    //onde vai ficar guardado a token
+    self.token = '';
+	self.filtro = "";
+    //onde vai ficar guardado o url autenticador
+    self.url = "http://testedev.baixou.com.br/processo/auth"
+	self.lista = '';
+	//o campo token sempre ira armazenar o ultimo token gerado ((com exito)) pelo storage
+	self.token = $window.localStorage.getItem('token');
+
+    self.getToken = function(email)
+	{
+
+      self.buscando = "buscando token...";
+      //executa o request
+      $http({
+          method: 'POST',
+          url: self.url,
+          data: 'email=' + email, //dados do email
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+      })
+        .then(function(resposta) 
+		{
+          var r = resposta.data;
+          console.log(r);
+          if (r.status) 
+		  {
+            self.token = r.token;
+          } else 
+		  {
+            self.token = r.error;
+          }
+        })
+        .catch(function(erro) {
+          self.token = erro.data;
+        })
+        .finally(function() {
+          self.buscando = ""
+        });
+    }
+	
+	self.getLista = function(token)
+	{
+
+      self.buscando = "Buscando Lista...";
+      //executa o request
+	  
+      $http({
+          method: 'GET',
+          url: self.montaUrlLista(token)
+      })
+        .then(function(resposta) 
+		{
+          var r = resposta.data;
+		  
+          if (r.status) 
+		  {
+            self.lista = r;
+			$window.localStorage.setItem('token',token);
+          } else 
+		  {
+			self.lista = '';
+            self.buscando = r.error;
+          }
+        })
+        .catch(function(erro) {
+          self.token = erro.data;
+        })
+        .finally(function() {
+        });
+    },
+	
+	self.montaUrlLista = function(token){
+		var baseUrl = "http://testedev.baixou.com.br/processo/lista?token=";
+		return baseUrl + token;
+	}
+	//scope recebe funcao que insere o token
+	self.salvarToken = function (token) {
+    $window.localStorage.setItem('token',token);
+}
+	
+ });
+ 
+</script>
+
+<body ng-controller="BuscarToken">
+  <div align="left">
+    <form ng-submit="getToken(email)">
+			<label>Digite o email:</label>
+				<input type="text" ng-model="email" placeholder="Seu email">
+				<input type="submit">
+    </form>
+  </div>
+ 
+ <!-- buscando lista -->
+  <h2>{{buscando}}</h2>
+  
+  <!--campo que recebe token -->
+  <input type="text" ng-model="token"/>
+  <input type="submit" value="Gerar Lista" ng-click="getLista(token)"> <br/>
+  
+  <p>Filtrar: <input type="text" ng-model="filtro"/></p>
+  <ul class="list-group">
+	  <!-- diretiva ng-repeat -->
+	  <li class="list-group-item" ng-repeat="oferta in lista.ofertas | filter: filtro" >
+			<b>Título:</b>&nbsp{{oferta.titulo}}<br/>
+			<img src="{{oferta.imagem}}" alt="imagem ilustrativa" width="300" height="300"><br/>
+			<b>Preço:</b>&nbspR$&nbsp{{oferta.preco}}<br/>
+			<b>Parcelas:</b>&nbsp{{oferta.nparcela}}<br/>
+			<b>Valor da Parcela:</b>&nbspR$&nbsp{{oferta.vparcela}}<br/>
+	  </li>
+ </ul>
+
+</body>
+
+</html>
